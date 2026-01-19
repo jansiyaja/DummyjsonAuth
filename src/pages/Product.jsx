@@ -66,7 +66,7 @@ const handleSubmit = async (e) => {
     } else {
       const created = await addProduct(form);
 
-      setProducts((prev) => [created, ...prev]); // add locally
+      setProducts((prev) => [created, ...prev]); 
     }
 
     setOpenDrawer(false);

@@ -8,38 +8,37 @@ const LoginForm = () => {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
-    const [loading, setLoading] = useState(false);
-    
-    const navigate = useNavigate();
+  const [loading, setLoading] = useState(false);
 
- const handleSubmit = async (e) => {
-   e.preventDefault();
-   setError("");
+  const navigate = useNavigate();
 
-   if(!username) {
-     setError("Username is required");
-     return;
-     }
-     if (!password) {
-       setError("Password is required");
-       return;
-     }
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setError("");
 
-   try {
-     setLoading(true);
-     const data = await login({ username, password });
+    if (!username) {
+      setError("Username is required");
+      return;
+    }
+    if (!password) {
+      setError("Password is required");
+      return;
+    }
 
-     localStorage.setItem("token", data.token);
-     localStorage.setItem("user", JSON.stringify(data));
+    try {
+      setLoading(true);
+      const data = await login({ username, password });
 
-    navigate('/product')
-   } catch (err) {
-     setError(err.message);
-   } finally {
-     setLoading(false);
-   }
- };
+      localStorage.setItem("token", data.token);
+      localStorage.setItem("user", JSON.stringify(data));
 
+      navigate("/product");
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <form
@@ -70,4 +69,5 @@ const LoginForm = () => {
     </form>
   );
 };
+
 export default LoginForm;
