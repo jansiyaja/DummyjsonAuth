@@ -1,4 +1,6 @@
-import LoginForm from "../components/loginForm";
+import Form from "../components/Form";
+
+
 
 
 
@@ -7,7 +9,7 @@ const Login = () => {
     <div
       className="min-h-screen flex items-center justify-center bg-linear-to-br from-[#FFF7F5] to-[#FADADD] px-4"
     >
-  <LoginForm/>
+  <Form/>
     </div>
   );
 }
