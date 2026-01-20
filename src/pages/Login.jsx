@@ -62,10 +62,10 @@ const Login = () => {
             src={loginAnimation}
             autoplay
             loop
-            className="w-105"
+            className="w-1/2"
           />
 
-          <div className="w-full max-w-md rounded-2xl  p-8 shadow-md">
+          <div className="w-lg max-w-md rounded-2xl  p-8 shadow-md">
             <Form />
           </div>
         </div>
