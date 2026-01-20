@@ -17,7 +17,6 @@ const DataTable = ({ columns, data, title, actionLabel, onActionClick ,loading})
         </div>
       )}
 
-      {/* TABLE */}
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead className="bg-pink-50 text-rose-600">
