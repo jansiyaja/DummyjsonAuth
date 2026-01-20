@@ -16,12 +16,8 @@ const Form = () => {
     e.preventDefault();
     setError("");
 
-    if (!username) {
-      setError("Username is required");
-      return;
-    }
-    if (!password) {
-      setError("Password is required");
+    if (!username || !password) {
+      setError("Please enter your username and password");
       return;
     }
 
@@ -43,29 +39,40 @@ const Form = () => {
   return (
     <form
       onSubmit={handleSubmit}
-      className="w-full max-w-md bg-white p-8 rounded-2xl shadow-lg"
+      className="w-full bg-white rounded-2xl px-8 py-10 shadow-xl"
     >
-      <h2 className="text-2xl font-semibold text-center text-rose-600 mb-6">
-        Login
+      <h2 className="text-3xl font-bold text-gray-800 text-center">
+        Welcome Back
       </h2>
 
-      <InputField
-        label="Username"
-        value={username}
-        onChange={(e) => setUsername(e.target.value)}
-        placeholder="Enter username"
-      />
-      <InputField
-        label="Password"
-        type="password"
-        value={password}
-        onChange={(e) => setPassword(e.target.value)}
-        placeholder="Enter password"
-      />
-      <Button text="Login" loading={loading} />
+      <p className="text-sm text-gray-500 text-center mt-2 mb-8">
+        Login to continue your journey
+      </p>
+
+      <div className="space-y-5">
+        <InputField
+          label="Username"
+          value={username}
+          onChange={(e) => setUsername(e.target.value)}
+          placeholder="Enter your username"
+        />
+
+        <InputField
+          label="Password"
+          type="password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          placeholder="Enter your password"
+        />
+      </div>
+
       {error && (
-        <p className="mb-4 text-sm text-red-500 text-center">{error}</p>
+        <p className="mt-4 text-sm text-red-500 text-center">{error}</p>
       )}
+
+      <div className="mt-8">
+        <Button text="Login" loading={loading} />
+      </div>
     </form>
   );
 };

@@ -2,10 +2,12 @@ import { useEffect, useState } from "react";
 import DataTable from "../components/DataTable";
 import ActionButtons from "../components/ActionButtons";
 import {
-  getUsers,
   addUser,
   updateUser,
   deleteUser,
+  searchUsers,
+  sortUsers,
+  limitUsers,
 } from "../services/userService";
 import EntityDrawer from "../components/EntityDrawer";
 import InputField from "../components/InputField";
@@ -20,6 +22,12 @@ const User = () => {
   const [editUser, setEditUser] = useState(null);
   const [confirmDelete, setConfirmDelete] = useState(null);
 
+  const [searchQuery, setSearchQuery] = useState("");
+
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+  const [totalUsers, setTotalUsers] = useState(0);
+
   const [form, setForm] = useState({
     firstName: "",
     lastName: "",
@@ -28,17 +36,26 @@ const User = () => {
     gender: "",
   });
 
-  const fetchUsers = async () => {
+  /* ================= FETCH USERS (PAGINATION) ================= */
+  const fetchUsers = async (page = 1) => {
     setLoading(true);
-    const data = await getUsers();
-    setUsers(data);
-    setLoading(false);
+    try {
+      const skip = (page - 1) * pageSize;
+      const { users, total } = await limitUsers(pageSize, skip);
+      setUsers(users);
+      setTotalUsers(total);
+    } catch (err) {
+      alert(err.message);
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => {
-    fetchUsers();
-  }, []);
+    fetchUsers(currentPage);
+  }, [currentPage, pageSize]);
 
+  /* ================= FORM HELPERS ================= */
   const resetForm = () => {
     setForm({
       firstName: "",
@@ -50,6 +67,7 @@ const User = () => {
     setEditUser(null);
   };
 
+  /* ================= SUBMIT ================= */
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
@@ -69,6 +87,7 @@ const User = () => {
     }
   };
 
+  /* ================= ACTIONS ================= */
   const handleEdit = (user) => {
     setEditUser(user);
     setForm(user);
@@ -86,17 +105,63 @@ const User = () => {
     }
   };
 
+  /* ================= SEARCH ================= */
+  const handleSearch = async () => {
+    setLoading(true);
+    try {
+      if (!searchQuery.trim()) {
+        await fetchUsers(1);
+        setCurrentPage(1);
+      } else {
+        const result = await searchUsers(searchQuery);
+        setUsers(result);
+      }
+    } catch (err) {
+      alert(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  /* ================= SORT ================= */
+  const handleSort = async (column, direction) => {
+    if (!column) return;
+    setLoading(true);
+    try {
+      const sorted = await sortUsers(column, direction);
+      setUsers(sorted);
+    } catch (err) {
+      alert(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  /* ================= TABLE COLUMNS ================= */
   const columns = [
-    { label: "ID", render: (row) => row.id },
+    { label: "ID", key: "id", render: (row) => row.id },
     {
-      label: "Name",
-      render: (row) => `${row.firstName} ${row.lastName}`,
+      label: "User",
+      key: "firstName",
+      render: (row) => (
+        <div className="flex items-center gap-3">
+          <img
+            src={row.image}
+            alt={row.firstName}
+            className="w-10 h-10 rounded-full object-cover"
+          />
+          <span className="font-medium">
+            {row.firstName} {row.lastName}
+          </span>
+        </div>
+      ),
     },
-    { label: "Email", render: (row) => row.email },
-    { label: "Age", render: (row) => row.age },
-    { label: "Gender", render: (row) => row.gender },
+    { label: "Email", key: "email", render: (row) => row.email },
+    { label: "Age", key: "age", render: (row) => row.age },
+    { label: "Gender", key: "gender", render: (row) => row.gender },
     {
       label: "Action",
+      key: "action",
       render: (row) => (
         <ActionButtons
           onEdit={() => handleEdit(row)}
@@ -115,6 +180,18 @@ const User = () => {
         columns={columns}
         data={users}
         loading={loading}
+        searchQuery={searchQuery}
+        onSearchChange={(val) => setSearchQuery(val)}
+        onSearch={handleSearch}
+        onSort={handleSort}
+        currentPage={currentPage}
+        totalItems={totalUsers}
+        pageSize={pageSize}
+        onPageChange={(page) => setCurrentPage(page)}
+        onPageSizeChange={(size) => {
+          setPageSize(size);
+          setCurrentPage(1);
+        }}
       />
 
       <EntityDrawer
@@ -131,26 +208,22 @@ const User = () => {
           value={form.firstName}
           onChange={(e) => setForm({ ...form, firstName: e.target.value })}
         />
-
         <InputField
           label="Last Name"
           value={form.lastName}
           onChange={(e) => setForm({ ...form, lastName: e.target.value })}
         />
-
         <InputField
           label="Email"
           value={form.email}
           onChange={(e) => setForm({ ...form, email: e.target.value })}
         />
-
         <InputField
           label="Age"
           type="number"
           value={form.age}
           onChange={(e) => setForm({ ...form, age: e.target.value })}
         />
-
         <InputField
           label="Gender"
           value={form.gender}

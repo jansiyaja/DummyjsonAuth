@@ -6,6 +6,9 @@ import {
   deleteProduct,
   addProduct,
   updateProduct,
+  searchProducts,
+  sortProducts,
+  limitProducts,
 } from "../services/productService";
 import EntityDrawer from "../components/EntityDrawer";
 import InputField from "../components/InputField";
@@ -15,12 +18,13 @@ import WarningPopup from "../components/WarningPopup";
 const Product = () => {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
-
   const [openDrawer, setOpenDrawer] = useState(false);
   const [editProduct, setEditProduct] = useState(null);
-
-  const [confirmDelete, setConfirmDelete] = useState(null);
-
+  const [searchQuery, setSearchQuery] = useState("");
+    const [confirmDelete, setConfirmDelete] = useState(null);
+    const [currentPage, setCurrentPage] = useState(1); 
+    const [pageSize, setPageSize] = useState(10); 
+    const [totalProducts, setTotalProducts] = useState(0); 
   const [form, setForm] = useState({
     title: "",
     price: "",
@@ -30,16 +34,25 @@ const Product = () => {
     thumbnail: "",
   });
 
-  const fetchProducts = async () => {
-    setLoading(true);
-    const data = await getProducts();
-    setProducts(data);
-    setLoading(false);
-  };
+ const fetchProducts = async (page = 1) => {
+   setLoading(true);
+   try {
+     const skip = (page - 1) * pageSize;
+     const { products, total } = await limitProducts(pageSize, skip);
+     setProducts(products);
+     setTotalProducts(total);
+   } catch (err) {
+     alert(err.message);
+   } finally {
+     setLoading(false);
+   }
+ };
 
-  useEffect(() => {
-    fetchProducts();
-  }, []);
+
+ useEffect(() => {
+   fetchProducts(currentPage);
+ }, [currentPage, pageSize]);
+
 
   const resetForm = () => {
     setForm({
@@ -53,29 +66,24 @@ const Product = () => {
     setEditProduct(null);
   };
 
-const handleSubmit = async (e) => {
-  e.preventDefault();
-
-  try {
-    if (editProduct) {
-      const updated = await updateProduct(editProduct.id, form);
-
-      setProducts((prev) =>
-        prev.map((p) => (p.id === editProduct.id ? updated : p)),
-      );
-    } else {
-      const created = await addProduct(form);
-
-      setProducts((prev) => [created, ...prev]); 
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      if (editProduct) {
+        const updated = await updateProduct(editProduct.id, form);
+        setProducts((prev) =>
+          prev.map((p) => (p.id === editProduct.id ? updated : p)),
+        );
+      } else {
+        const created = await addProduct(form);
+        setProducts((prev) => [created, ...prev]);
+      }
+      setOpenDrawer(false);
+      resetForm();
+    } catch (err) {
+      alert(err.message);
     }
-
-    setOpenDrawer(false);
-    resetForm();
-  } catch (err) {
-    alert(err.message);
-  }
-};
-
+  };
 
   const handleEdit = (product) => {
     setEditProduct(product);
@@ -83,25 +91,51 @@ const handleSubmit = async (e) => {
     setOpenDrawer(true);
   };
 
- const handleDelete = async () => {
-   try {
-     const id = confirmDelete.id; 
+  const handleDelete = async () => {
+    try {
+      const id = confirmDelete.id;
+      await deleteProduct(id);
+      setConfirmDelete(null);
+      setProducts((prev) => prev.filter((p) => p.id !== id));
+    } catch (err) {
+      alert(err.message);
+    }
+  };
 
-     await deleteProduct(id);
+  const handleSearch = async () => {
+    setLoading(true);
+    try {
+      if (!searchQuery.trim()) {
+        await fetchProducts();
+      } else {
+        const result = await searchProducts(searchQuery);
+        setProducts(result);
+      }
+    } catch (err) {
+      alert(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-     setConfirmDelete(null);
-
-     setProducts((prev) => prev.filter((p) => p.id !== id));
-   } catch (err) {
-     alert(err.message);
-   }
- };
-
+  const handleSort = async (column, direction) => {
+    if (!column) return;
+    setLoading(true);
+    try {
+      const sorted = await sortProducts(column, direction);
+      setProducts(sorted);
+    } catch (err) {
+      alert(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const columns = [
-    { label: "ID", render: (row) => row.id },
+    { label: "ID", key: "id", render: (row) => row.id },
     {
       label: "Product",
+      key: "title",
       render: (row) => (
         <div className="flex items-center gap-3">
           <img
@@ -112,12 +146,13 @@ const handleSubmit = async (e) => {
         </div>
       ),
     },
-    { label: "Price", render: (row) => `$${row.price}` },
-    { label: "Brand", render: (row) => row.brand },
-    { label: "Category", render: (row) => row.category },
-    { label: "Stock", render: (row) => row.stock },
+    { label: "Price", key: "price", render: (row) => `$${row.price}` },
+    { label: "Brand", key: "brand", render: (row) => row.brand },
+    { label: "Category", key: "category", render: (row) => row.category },
+    { label: "Stock", key: "stock", render: (row) => row.stock },
     {
       label: "Action",
+      key: "action",
       render: (row) => (
         <ActionButtons
           onEdit={() => handleEdit(row)}
@@ -136,6 +171,18 @@ const handleSubmit = async (e) => {
         columns={columns}
         data={products}
         loading={loading}
+        searchQuery={searchQuery}
+        onSearchChange={(val) => setSearchQuery(val)}
+        onSearch={handleSearch}
+        onSort={handleSort}
+        currentPage={currentPage}
+        totalItems={totalProducts}
+        pageSize={pageSize}
+        onPageChange={(page) => setCurrentPage(page)}
+        onPageSizeChange={(size) => {
+          setPageSize(size);
+          setCurrentPage(1); // reset to first page
+        }}
       />
 
       <EntityDrawer
@@ -152,33 +199,28 @@ const handleSubmit = async (e) => {
           value={form.title}
           onChange={(e) => setForm({ ...form, title: e.target.value })}
         />
-
         <InputField
           label="Price"
           type="number"
           value={form.price}
           onChange={(e) => setForm({ ...form, price: e.target.value })}
         />
-
         <InputField
           label="Brand"
           value={form.brand}
           onChange={(e) => setForm({ ...form, brand: e.target.value })}
         />
-
         <InputField
           label="Category"
           value={form.category}
           onChange={(e) => setForm({ ...form, category: e.target.value })}
         />
-
         <InputField
           label="Stock"
           type="number"
           value={form.stock}
           onChange={(e) => setForm({ ...form, stock: e.target.value })}
         />
-
         <Button text={editProduct ? "Update Product" : "Add Product"} />
       </EntityDrawer>
 
